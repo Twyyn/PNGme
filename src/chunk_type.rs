@@ -1,4 +1,3 @@
-use std::convert::TryFrom;
 use std::fmt;
 use std::num::ParseIntError;
 use std::str::FromStr;
@@ -9,11 +8,11 @@ use crate::{Error, Result};
 pub struct ChunkType([u8; 4]);
 
 impl ChunkType {
-    fn bytes(&self) -> [u8; 4] {
+    pub fn bytes(&self) -> [u8; 4] {
         self.0
     }
 
-    fn is_valid(&self) -> bool {
+    pub fn is_valid(&self) -> bool {
         matches!(
             self.0,
             [first_byte, second_byte, third_byte, fourth_byte]
@@ -24,19 +23,19 @@ impl ChunkType {
         )
     }
 
-    fn is_critical(&self) -> bool {
+    pub fn is_critical(&self) -> bool {
         self.0[0].is_ascii_uppercase() /* First Byte */
     }
 
-    fn is_public(&self) -> bool {
+    pub fn is_public(&self) -> bool {
         self.0[1].is_ascii_uppercase() /* Second Byte */
     }
 
-    fn is_reserved_bit_valid(&self) -> bool {
+    pub fn is_reserved_bit_valid(&self) -> bool {
         self.0[2].is_ascii_uppercase() /* Third Byte */
     }
 
-    fn is_safe_to_copy(&self) -> bool {
+    pub fn is_safe_to_copy(&self) -> bool {
         self.0[3].is_ascii_lowercase() /* Fourth Byte */
     }
 }
@@ -77,11 +76,7 @@ impl fmt::Display for ChunkType {
     }
 }
 
-
-
-
-
-/* ============================================ Unit Tests ============================================ */
+/* =============== Unit Tests =============== */
 #[cfg(test)]
 mod tests {
     use super::*;
