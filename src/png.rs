@@ -47,13 +47,20 @@ impl Png {
     pub fn chunk_by_type(&self, chunk_type: &str) -> Option<&Chunk> {
         match ChunkType::from_str(chunk_type) {
             Ok(chunk_type) => self.chunks.iter().find(|c| c.chunk_type() == &chunk_type),
+
             Err(_) => None,
         }
     }
 
     pub fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes: Vec<u8> = Vec::new();
-        bytes.extend_from_slice(&Self::STANDARD_HEADER);
+        let capacity = 8 + self
+            .chunks
+            .iter()
+            .map(|c| 12 + c.length() as usize)
+            .sum::<usize>();
+        let mut bytes: Vec<u8> = Vec::with_capacity(capacity);
+
+        bytes.extend_from_slice(self.header());
 
         for chunk in &self.chunks {
             bytes.extend_from_slice(&chunk.as_bytes());
