@@ -19,11 +19,11 @@ impl ChunkType {
     }
 
     fn is_critical(&self) -> bool {
-        u8::is_ascii_uppercase(&(self.chunk[0] & 0x20))
+        u8::is_ascii_uppercase(&self.chunk[0])
     }
 
     fn is_public(&self) -> bool {
-        u8::is_ascii_uppercase(&(self.chunk[1] & 0x20))
+        u8::is_ascii_uppercase(&self.chunk[1])
     }
 
     fn is_reserved_bit_valid(&self) -> bool {
