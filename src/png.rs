@@ -53,7 +53,6 @@ impl Png {
 
     pub fn as_bytes(&self) -> Vec<u8> {
         let mut bytes: Vec<u8> = Vec::new();
-
         bytes.extend_from_slice(&Self::STANDARD_HEADER);
 
         for chunk in &self.chunks {
