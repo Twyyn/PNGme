@@ -1,7 +1,8 @@
 use std::convert::TryFrom;
 use std::fmt;
 use std::fs;
-use std::io::{BufReader, Read};
+use std::fs::read;
+use std::io::{BufReader, Cursor, Read};
 use std::path::Path;
 use std::str::FromStr;
 
@@ -67,5 +68,22 @@ impl Png {
         }
 
         bytes
+    }
+}
+
+impl TryFrom<&[u8]> for Png {
+    type Error = Error;
+
+    fn try_from(bytes: &[u8]) -> Result<Png> {
+        let mut reader = BufReader::new(Cursor::new(bytes));
+
+        let mut header = [0u8; 8];
+        reader.read_exact(&mut header)?;
+
+        if header != Self::STANDARD_HEADER {
+            return Err(Error::from("Invalid header"));
+        }
+
+        todo!()
     }
 }
