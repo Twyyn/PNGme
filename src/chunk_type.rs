@@ -1,37 +1,43 @@
 use std::convert::TryFrom;
 use std::fmt;
+use std::num::ParseIntError;
 use std::str::FromStr;
 
 use crate::{Error, Result};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ChunkType {
-    chunk: [u8; 4],
-}
+pub struct ChunkType([u8; 4]);
 
 impl ChunkType {
     fn bytes(&self) -> [u8; 4] {
-        self.chunk
+        self.0
     }
 
     fn is_valid(&self) -> bool {
-        todo!()
+        matches!(
+            self.0,
+            [first_byte, second_byte, third_byte, fourth_byte]
+                if first_byte.is_ascii_alphabetic()
+                && second_byte.is_ascii_alphabetic()
+                && third_byte.is_ascii_uppercase()
+                && fourth_byte.is_ascii_alphabetic()
+        )
     }
 
     fn is_critical(&self) -> bool {
-        u8::is_ascii_uppercase(&self.chunk[0])
+        self.0[0].is_ascii_uppercase() /* First Byte */
     }
 
     fn is_public(&self) -> bool {
-        u8::is_ascii_uppercase(&self.chunk[1])
+        self.0[1].is_ascii_uppercase() /* Second Byte */
     }
 
     fn is_reserved_bit_valid(&self) -> bool {
-        todo!()
+        self.0[2].is_ascii_uppercase() /* Third Byte */
     }
 
     fn is_safe_to_copy(&self) -> bool {
-        todo!()
+        self.0[3].is_ascii_lowercase() /* Fourth Byte */
     }
 }
 
@@ -39,7 +45,7 @@ impl TryFrom<[u8; 4]> for ChunkType {
     type Error = Error;
 
     fn try_from(bytes: [u8; 4]) -> Result<Self> {
-        todo!()
+        Ok(Self(bytes))
     }
 }
 
@@ -47,15 +53,34 @@ impl FromStr for ChunkType {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        todo!()
+        let bytes: [u8; 4] = s
+            .as_bytes()
+            .try_into()
+            .map_err(|_| "chunk type must be 4 bytes")?;
+
+        if !bytes.iter().all(|b| b.is_ascii_alphabetic()) {
+            return Err("chunk type must be ASCII alphabetic".into());
+        }
+
+        Ok(Self(bytes))
     }
 }
 
 impl fmt::Display for ChunkType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        todo!()
+        let [first_byte, second_byte, third_byte, fourth_byte] = self.0;
+        write!(
+            f,
+            "{}{}{}{}",
+            first_byte as char, second_byte as char, third_byte as char, fourth_byte as char
+        )
     }
 }
+
+
+
+
+
 /* ============================================ Unit Tests ============================================ */
 #[cfg(test)]
 mod tests {
