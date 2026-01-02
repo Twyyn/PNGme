@@ -24,7 +24,7 @@ impl Png {
         self.chunks.push(chunk);
     }
 
-    fn remove_first_chunk(&mut self, chunk_type: &str) -> Result<Chunk> {
+    pub fn remove_first_chunk(&mut self, chunk_type: &str) -> Result<Chunk> {
         let target_type = ChunkType::from_str(chunk_type)?;
 
         let index = self

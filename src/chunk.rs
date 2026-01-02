@@ -1,7 +1,8 @@
-use crate::chunk_type::ChunkType;
-use crate::{Error, Result};
 use std::fmt;
 use std::io::{BufReader, Read};
+
+use crate::chunk_type::ChunkType;
+use crate::{Error, Result};
 
 pub struct Chunk {
     length: u32,
