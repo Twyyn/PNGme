@@ -53,7 +53,7 @@ impl Chunk {
         bytes
     }
 
-    /* Helpers */
+    /* Helper */
     fn calculate_crc(chunk_type: &ChunkType, data: &[u8]) -> u32 {
         let bytes = chunk_type
             .bytes()
@@ -90,7 +90,7 @@ impl TryFrom<&[u8]> for Chunk {
 
         let calculated_crc = Self::calculate_crc(&chunk_type, &data);
         if crc != calculated_crc {
-            return Err("CRC mismatch".into());
+            return Err(Error::from("Chunk type not found"));
         }
 
         Ok(Self {
@@ -108,11 +108,12 @@ impl fmt::Display for Chunk {
         writeln!(f, "  Length: {}", self.length())?;
         writeln!(f, "  Type: {}", self.chunk_type())?;
         writeln!(f, "  Data: {} bytes", self.data().len())?;
-        writeln!(f, "  Crc: {}", self.crc())?;
+        writeln!(f, "  CRC: {}", self.crc())?;
         writeln!(f, "}}",)?;
         Ok(())
     }
 }
+
 /* =============== Unit Tests =============== */
 #[cfg(test)]
 mod tests {

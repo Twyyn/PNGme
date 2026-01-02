@@ -55,10 +55,10 @@ impl FromStr for ChunkType {
         let bytes: [u8; 4] = s
             .as_bytes()
             .try_into()
-            .map_err(|_| "chunk type must be 4 bytes")?;
+            .map_err(|_| Error::from("Chunk type not found"))?;
 
         if !bytes.iter().all(|b| b.is_ascii_alphabetic()) {
-            return Err("chunk type must be ASCII alphabetic".into());
+            return Err(Error::from("Chunk type must be ASCII alphabetic"));
         }
 
         Ok(Self(bytes))
