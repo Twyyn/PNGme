@@ -1,11 +1,11 @@
 use std::fmt;
-use std::io::{BufReader, Read};
+use std::io::{Cursor, Read};
 
 use crate::chunk_type::ChunkType;
 use crate::{Error, Result};
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Chunk {
-    length: u32,
     chunk_type: ChunkType,
     data: Vec<u8>,
     crc: u32,
@@ -13,11 +13,9 @@ pub struct Chunk {
 
 impl Chunk {
     pub fn new(chunk_type: ChunkType, data: Vec<u8>) -> Self {
-        let length = data.len() as u32;
         let crc = Self::calculate_crc(&chunk_type, &data);
 
         Self {
-            length,
             chunk_type,
             data,
             crc,
@@ -25,7 +23,7 @@ impl Chunk {
     }
 
     pub fn length(&self) -> u32 {
-        self.length
+        self.data.len() as u32
     }
 
     pub fn chunk_type(&self) -> &ChunkType {
@@ -40,13 +38,13 @@ impl Chunk {
         self.crc
     }
 
-    pub fn data_as_string(&self) -> Result<String> {
-        Ok(std::str::from_utf8(&self.data)?.to_string())
+    pub fn data_as_string(&self) -> Result<&str> {
+        std::str::from_utf8(&self.data).map_err(Into::into)
     }
 
     pub fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes: Vec<u8> = Vec::with_capacity(12 + self.length as usize);
-        bytes.extend_from_slice(&self.length.to_be_bytes());
+        let mut bytes: Vec<u8> = Vec::with_capacity(12 + self.length() as usize);
+        bytes.extend_from_slice(&self.length().to_be_bytes());
         bytes.extend_from_slice(&self.chunk_type.bytes());
         bytes.extend_from_slice(&self.data);
         bytes.extend_from_slice(&self.crc.to_be_bytes());
@@ -54,36 +52,29 @@ impl Chunk {
         bytes
     }
 
-    /* Helper */
     fn calculate_crc(chunk_type: &ChunkType, data: &[u8]) -> u32 {
-        let bytes = chunk_type
-            .bytes()
-            .iter()
-            .chain(data.iter())
-            .copied()
-            .collect::<Vec<u8>>();
-
-        crc32fast::hash(&bytes)
+        let mut hasher = crc32fast::Hasher::new();
+        hasher.update(&chunk_type.bytes());
+        hasher.update(data);
+        hasher.finalize()
     }
-}
 
-impl TryFrom<&[u8]> for Chunk {
-    type Error = Error;
-
-    fn try_from(bytes: &[u8]) -> Result<Self> {
-        let mut reader = BufReader::new(bytes);
-
+        pub fn read_from<R: Read>(reader: &mut R) -> Result<Self> {
         let mut length_buffer = [0u8; 4];
         reader.read_exact(&mut length_buffer)?;
-        let length = u32::from_be_bytes(length_buffer);
+        let length: u32 = u32::from_be_bytes(length_buffer);
 
         let mut type_buffer = [0u8; 4];
         reader.read_exact(&mut type_buffer)?;
         let chunk_type = ChunkType::try_from(type_buffer)?;
 
-        let mut data_buffer = vec![0u8; length as usize];
-        reader.read_exact(&mut data_buffer)?;
-        let data = data_buffer;
+        let mut data = vec![0u8; length as usize];
+        reader.read_exact(&mut data)?;
+
+        const MAX_CHUNK_SIZE: u32 = 2_u32.pow(31) - 1;
+        if length > MAX_CHUNK_SIZE {
+            return Err(Error::from("Chunk too large"));
+        }
 
         let mut crc_buffer = [0u8; 4];
         reader.read_exact(&mut crc_buffer)?;
@@ -91,15 +82,23 @@ impl TryFrom<&[u8]> for Chunk {
 
         let calculated_crc = Self::calculate_crc(&chunk_type, &data);
         if crc != calculated_crc {
-            return Err(Error::from("Chunk type not found"));
+            return Err(Error::from("Invalid chunk: CRC verification failed"));
         }
 
         Ok(Self {
-            length,
             chunk_type,
             data,
             crc,
         })
+    }
+}
+
+
+impl TryFrom<&[u8]> for Chunk {
+    type Error = Error;
+
+    fn try_from(bytes: &[u8]) -> Result<Self> {
+        Self::read_from(&mut Cursor::new(bytes))
     }
 }
 
@@ -115,7 +114,6 @@ impl fmt::Display for Chunk {
     }
 }
 
-/* =============== Unit Tests =============== */
 #[cfg(test)]
 mod tests {
     use super::*;

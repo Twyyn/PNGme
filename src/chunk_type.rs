@@ -1,10 +1,9 @@
 use std::fmt;
-use std::num::ParseIntError;
 use std::str::FromStr;
 
 use crate::{Error, Result};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChunkType([u8; 4]);
 
 impl ChunkType {
@@ -13,30 +12,30 @@ impl ChunkType {
     }
 
     pub fn is_valid(&self) -> bool {
-        matches!(
-            self.0,
-            [first_byte, second_byte, third_byte, fourth_byte]
-                if first_byte.is_ascii_alphabetic()
-                && second_byte.is_ascii_alphabetic()
-                && third_byte.is_ascii_uppercase()
-                && fourth_byte.is_ascii_alphabetic()
-        )
+        self.0.iter().all(|b| b.is_ascii_alphabetic()) && self.is_reserved_bit_valid()
     }
 
     pub fn is_critical(&self) -> bool {
-        self.0[0].is_ascii_uppercase() /* First Byte */
+        self.0[0].is_ascii_uppercase()
     }
 
     pub fn is_public(&self) -> bool {
-        self.0[1].is_ascii_uppercase() /* Second Byte */
+        self.0[1].is_ascii_uppercase()
     }
 
     pub fn is_reserved_bit_valid(&self) -> bool {
-        self.0[2].is_ascii_uppercase() /* Third Byte */
+        self.0[2].is_ascii_uppercase()
     }
 
     pub fn is_safe_to_copy(&self) -> bool {
-        self.0[3].is_ascii_lowercase() /* Fourth Byte */
+        self.0[3].is_ascii_lowercase()
+    }
+
+    fn validate_bytes(bytes: &[u8; 4]) -> Result<()> {
+        if !bytes.iter().all(|b| b.is_ascii_alphabetic()) {
+            return Err("Chunk type must be ASCII alphabetic".into());
+        }
+        Ok(())
     }
 }
 
@@ -44,6 +43,7 @@ impl TryFrom<[u8; 4]> for ChunkType {
     type Error = Error;
 
     fn try_from(bytes: [u8; 4]) -> Result<Self> {
+        Self::validate_bytes(&bytes)?;
         Ok(Self(bytes))
     }
 }
@@ -55,28 +55,19 @@ impl FromStr for ChunkType {
         let bytes: [u8; 4] = s
             .as_bytes()
             .try_into()
-            .map_err(|_| Error::from("Chunk type not found"))?;
+            .map_err(|_| Error::from("Chunk type must be exacly 4 bytes"))?;
 
-        if !bytes.iter().all(|b| b.is_ascii_alphabetic()) {
-            return Err(Error::from("Chunk type must be ASCII alphabetic"));
-        }
-
-        Ok(Self(bytes))
+        Self::try_from(bytes)
     }
 }
 
 impl fmt::Display for ChunkType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let [first_byte, second_byte, third_byte, fourth_byte] = self.0;
-        write!(
-            f,
-            "{}{}{}{}",
-            first_byte as char, second_byte as char, third_byte as char, fourth_byte as char
-        )
+        let s = unsafe { std::str::from_utf8_unchecked(&self.0) };
+        f.write_str(s)
     }
 }
 
-/* =============== Unit Tests =============== */
 #[cfg(test)]
 mod tests {
     use super::*;
